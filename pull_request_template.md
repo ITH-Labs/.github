@@ -7,6 +7,6 @@ Explain what this PR changes.
 - 
 
 ## Checklist
-- [ ] Code works as expected
-- [ ] Documentation updated (if needed)
-- [ ] Linked related issue (if applicable)
+- [] Code works as expected
+- [] Tests updated and passing
+- [] Linked related issue (if applicable)

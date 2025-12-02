@@ -7,4 +7,4 @@ Use the GitHub "Security" tab to privately report vulnerabilities.
 This policy applies to all repositories under the ITH-Labs organization.
 
 ## Response
-We will review all reports as soon as possible.
+I will review all reports as soon as possible.
