@@ -1,0 +1,63 @@
+name: Reusable .NET Build & Deploy
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      project_path:
+        required: true
+        type: string
+      publish_branch:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore ${{ inputs.project_path }}
+
+      - name: Build
+        run: dotnet build ${{ inputs.project_path }} --configuration Release --no-restore
+
+      - name: Run Tests
+        run: |
+          echo "Searching for test projects"
+          TEST_PROJECTS=$(find . -type f -name "*Tests.csproj")
+
+          if [ -z "$TEST_PROJECTS" ]; then
+            echo "No test projects found."
+            exit 1
+          fi
+
+          echo "Found test projects:"
+          echo "$TEST_PROJECTS"
+
+          for proj in $TEST_PROJECTS; do
+            echo "Running tests for: $proj"
+            dotnet test "$proj" --configuration Release --verbosity normal
+          done
+
+      # Publish artifact only on the publish branch
+      - name: Publish Artifact
+        if: github.ref == format('refs/heads/{0}', inputs.publish_branch)
+        run: dotnet publish ${{ inputs.project_path }} -c Release -o published
+
+      - name: Upload Artifact
+        if: github.ref == format('refs/heads/{0}', inputs.publish_branch)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.project_name }}
+          path: published/
