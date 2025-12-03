@@ -1,0 +1,21 @@
+name: Dotnet Format
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        required: true
+        type: string
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run dotnet format
+        run: dotnet format ${{ inputs.project_path }} --verify-no-changes
