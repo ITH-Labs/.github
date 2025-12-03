@@ -32,9 +32,9 @@ jobs:
       - name: Build
         run: dotnet build ${{ inputs.project_path }} --configuration Release --no-restore
 
-      - name: Run Tests
+      - name: Run Tests and Collect Coverage
         run: |
-          echo "Searching for test projects"
+          echo "Searching for test projects..."
           TEST_PROJECTS=$(find . -type f -name "*Tests.csproj")
 
           if [ -z "$TEST_PROJECTS" ]; then
@@ -46,9 +46,28 @@ jobs:
           echo "$TEST_PROJECTS"
 
           for proj in $TEST_PROJECTS; do
-            echo "Running tests for: $proj"
-            dotnet test "$proj" --configuration Release --verbosity normal
+            echo "Running tests for: $proj with coverage"
+            dotnet test "$proj" --configuration Release --collect:"XPlat Code Coverage" --verbosity normal
           done
+
+      - name: Generate Coverage Report
+        run: |
+          echo "Finding coverage files..."
+          COVERAGE_FILES=$(find . -type f -path "*/TestResults/*/coverage.cobertura.xml")
+              
+          if [ -z "$COVERAGE_FILES" ]; then
+            echo "No coverage files found."
+            exit 1
+          fi
+              
+          echo "Found coverage files:"
+          echo "$COVERAGE_FILES"
+              
+          # Install reportgenerator
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+              
+          # Generate HTML report and TextSummary
+          reportgenerator -reports:"$COVERAGE_FILES" -targetdir:coverage-report -reporttypes:"HtmlInline_AzurePipelines;TextSummary"
 
       # Publish artifact only on the publish branch
       - name: Publish Artifact
@@ -61,3 +80,10 @@ jobs:
         with:
           name: ${{ inputs.project_name }}
           path: published/
+
+      - name: Upload Code Coverage Artifact
+        if: github.ref == format('refs/heads/{0}', inputs.publish_branch)
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: coverage-report/
