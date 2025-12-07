@@ -1,4 +1,4 @@
-# ITH-Labs Organization Defaults
+# ITH-Labs Organization Defaults [![pages-build-deployment](https://github.com/ITH-Labs/.github/actions/workflows/pages/pages-build-deployment/badge.svg)](https://github.com/ITH-Labs/.github/actions/workflows/pages/pages-build-deployment)
 
 This repository defines the default community health files and contribution standards for all repositories under the ITH-Labs organization.
 
