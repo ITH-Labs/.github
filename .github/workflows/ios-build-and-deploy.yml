@@ -1,0 +1,35 @@
+name: Reusable iOS Build & Deploy
+
+on:
+  workflow_call:
+    inputs:
+      module:
+        required: false
+        default: "shared"
+        type: string
+      upload_artifacts:
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  ios-build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build XCFramework
+        run: ./gradlew :${{ inputs.module }}:assembleXCFramework
+
+      - name: Upload XCFramework Artifact
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-xcframework
+          path: ${{ inputs.module }}/build/XCFrameworks/**/*.xcframework
