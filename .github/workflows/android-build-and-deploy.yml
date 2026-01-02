@@ -5,7 +5,7 @@ on:
     inputs:
       module:
         required: false
-        default: "androidApp"
+        default: "composeApp"
         type: string
       upload_artifacts:
         required: false
@@ -28,6 +28,8 @@ jobs:
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: false
 
       - name: Build Android Debug APK
         run: ./gradlew :${{ inputs.module }}:assembleDebug
