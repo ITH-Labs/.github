@@ -1,24 +1,23 @@
-name: CI/CD Pipeline
+name: Reusable .NET Build & Deploy
 
 on:
-  push:
-    branches:
-      - main
-      - dev
-      - feat/**
-  pull_request:
-    branches:
-      - main
-      - dev
-
-permissions:
-  contents: read
-  packages: write
+  workflow_call:
+    inputs:
+      project_name:
+        required: true
+        type: string
+      project_path:
+        required: true
+        type: string
+      publish_branch:
+        required: true
+        type: string
 
 jobs:
   # Build, Test, Publish Artifact
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,10 +28,10 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore dependencies
-        run: dotnet restore TAE.UploadService
+        run: dotnet restore ${{ inputs.project_path }}
 
       - name: Build
-        run: dotnet build TAE.UploadService --configuration Release --no-restore
+        run: dotnet build ${{ inputs.project_path }} --configuration Release --no-restore
 
       - name: Run Tests and Collect Coverage
         run: |
@@ -44,13 +43,12 @@ jobs:
           fi
           echo "$TEST_PROJECTS" | tr ' ' '\n'
           for proj in $TEST_PROJECTS; do
-            echo "Testing $proj"
+            echo "Running tests for $proj"
             dotnet test "$proj" --configuration Release --collect:"XPlat Code Coverage" --verbosity normal
           done
 
       - name: Generate Coverage Report
         run: |
-          echo "Finding coverage files..."
           COVERAGE_FILES=$(find . -type f -path "*/TestResults/*/coverage.cobertura.xml")
           if [ -z "$COVERAGE_FILES" ]; then
             echo "No coverage files found."
@@ -59,16 +57,18 @@ jobs:
           dotnet tool install -g dotnet-reportgenerator-globaltool
           reportgenerator -reports:"$COVERAGE_FILES" -targetdir:coverage-report -reporttypes:"HtmlInline_AzurePipelines;TextSummary"
 
-      - name: Publish .NET Artifact
-        run: dotnet publish TAE.UploadService -c Release -o published
+      - name: Publish .NET Artifact (only on publish branch)
+        if: github.ref_name == inputs.publish_branch
+        run: dotnet publish ${{ inputs.project_path }} -c Release -o published
 
-      - name: Upload Artifact
+      - name: Upload Artifact (only on publish branch)
+        if: github.ref_name == inputs.publish_branch
         uses: actions/upload-artifact@v4
         with:
-          name: TAE.UploadService
+          name: ${{ inputs.project_name }}
           path: published/
 
-      - name: Upload Code Coverage
+      - name: Upload Code Coverage Artifact
         uses: actions/upload-artifact@v4
         with:
           name: code-coverage
@@ -80,11 +80,13 @@ jobs:
     needs: build
     if: github.event_name == 'push'
     permissions:
+      contents: read
       packages: write
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -109,7 +111,7 @@ jobs:
           echo "tags=$TAGS" >> $GITHUB_OUTPUT
           echo "Resolved tags: $TAGS"
 
-      - name: Build & Push Docker Image
+      - name: Build Docker Image
         run: |
           ORG=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
@@ -121,7 +123,7 @@ jobs:
             docker push $IMAGE:$TAG
           done
 
-  # GHCR Cleanup
+  # Optional GHCR Cleanup (keeps registry tidy)
   cleanup:
     runs-on: ubuntu-latest
     needs: docker
@@ -137,3 +139,4 @@ jobs:
           ignore-versions: |
             ^latest$
             ^dev$
+            ^feat-.*$
