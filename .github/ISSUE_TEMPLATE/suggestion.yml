@@ -1,13 +1,13 @@
-name: Suggestion
+name: Idea
 description: Share an idea or general suggestion
-title: "[SUGGESTION] "
+title: "[IDEA] "
 labels: ["idea"]
 body:
   - type: textarea
     id: idea
     attributes:
       label: Your Idea
-      description: Describe your suggestion or idea
+      description: Describe your idea or suggestion
       placeholder: It would be nice if...
     validations:
       required: true
